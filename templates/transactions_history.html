@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Transaction History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+
+    <h1>Transaction History</h1>
+
+    <div class="container">
+        <input type="text" id="phone" placeholder="Enter Phone Number"><br><br>
+        <button onclick="loadTransactions()">Load Transactions</button>
+        <br><br>
+        <div id="transactions"></div>
+        <div id="pagination" class="hidden">
+            <br>
+            <button onclick="prevPage()">Previous</button>
+            <button onclick="nextPage()">Next</button>
+            <p id="pageInfo"></p>
+        </div>
+        <br>
+        <a href="/">Back to Home</a>
+    </div>
+
+    <script>
+
+        let allTransactions = [];
+        let currentPage = 1;
+        let currentUser = null;
+        const perPage = 5;
+
+        document.getElementById("phone").addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                loadTransactions();
+            }
+        });
+
+        function showError(msg) {
+            document.getElementById("transactions").innerHTML =
+                `<p class="error">${msg}</p>`;
+            hidePagination();
+        }
+
+        function showSuccess(msg) {
+            document.getElementById("transactions").innerHTML =
+                `<p class="success">${msg}</p>`;
+            hidePagination();
+        }
+
+        function showLoading() {
+            document.getElementById("transactions").innerHTML =
+                `<p class="success">Loading transactions...</p>`;
+            hidePagination();
+        }
+
+        function showPagination() {
+            document.getElementById("pagination").classList.remove("hidden");
+        }
+
+        function hidePagination() {
+            document.getElementById("pagination").classList.add("hidden");
+        }
+
+        function loadTransactions() {
+
+            const phone = document.getElementById("phone").value.trim();
+
+            if (!phone) {
+                showError("Phone number is required");
+                return;
+            }
+
+            showLoading();
+
+            fetch(`/user/${phone}`)
+                .then(res => res.json())
+                .then(user => {
+
+                    if (user.error) {
+                        showError("User not found");
+                        return;
+                    }
+
+                    let transactions = user.transactions || [];
+
+                    if (transactions.length === 0) {
+                        showError(`No transactions found for ${user.name}`);
+                        return;
+                    }
+
+                    currentUser = user;
+                    allTransactions = transactions.reverse();
+                    currentPage = 1;
+
+                    renderPage();
+                    showPagination();
+
+                })
+                .catch(() => {
+                    showError("Something went wrong");
+                });
+        }
+
+        function renderPage() {
+
+            const start = (currentPage - 1) * perPage;
+            const end = start + perPage;
+
+            const pageData = allTransactions.slice(start, end);
+
+            let html = `
+        <div class="title">${currentUser.name} (${currentUser.phone})</div>
+    `;
+
+            pageData.forEach(t => {
+
+                html += `
+            <div class="card">
+
+                <p><strong>Final Bill:</strong> ₹${Number(t.final_bill).toFixed(2)}</p>
+                <p><strong>GST:</strong> ₹${Number(t.gst).toFixed(2)}</p>
+                <p><strong>Cashback:</strong> ₹${Number(t.cashback).toFixed(2)}</p>
+
+                <p><strong>Discounts:</strong> ${t.discounts_applied.length > 0
+                        ? `<span class="tag">${t.discounts_applied.join(", ")}</span>`
+                        : `<span class="tag">No discounts</span>`
+                    }</p>
+
+                <p class="date-text">${t.date_time}</p>
+
+            </div>
+        `;
+            });
+
+            document.getElementById("transactions").innerHTML = html;
+
+            const totalPages = Math.ceil(allTransactions.length / perPage);
+
+            document.getElementById("pageInfo").innerText =
+                `Page ${currentPage} of ${totalPages}`;
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(allTransactions.length / perPage);
+
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPage();
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage();
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>

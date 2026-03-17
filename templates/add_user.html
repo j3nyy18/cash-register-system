@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Add User</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+    <h1>Add New User</h1>
+
+    <div class="container">
+        <input type="text" id="name" placeholder="Enter Name"><br><br>
+        <input type="text" id="phone" placeholder="Enter Phone Number"><br><br>
+        <button onclick="addUser()">Add User</button>
+        <br><br>
+        <div id="result"></div>
+        <br>
+        <a href="/">Back to Home</a>
+    </div>
+
+    <script>
+
+        document.getElementById("name").addEventListener("keypress", handleEnter);
+        document.getElementById("phone").addEventListener("keypress", handleEnter);
+
+        function handleEnter(e) {
+            if (e.key === "Enter") {
+                addUser();
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById("result").innerHTML =
+                `<p class="error">${msg}</p>`;
+        }
+
+        function showSuccess(msg) {
+            document.getElementById("result").innerHTML =
+                `<p class="success">${msg}</p>`;
+        }
+
+        function addUser() {
+
+            const name = document.getElementById("name").value.trim();
+            const phone = document.getElementById("phone").value.trim();
+
+            if (!name || !phone) {
+                showError("All fields required");
+                return;
+            }
+
+            fetch("/add_user", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ name, phone })
+            })
+                .then(res => res.json())
+                .then(data => {
+
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        showSuccess("User added successfully!");
+
+
+                        document.getElementById("name").value = "";
+                        document.getElementById("phone").value = "";
+                    }
+
+                })
+                .catch(() => {
+                    showError("Something went wrong");
+                });
+        }
+
+    </script>
+</body>
+
+</html>

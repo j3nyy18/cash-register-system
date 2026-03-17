@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Transaction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+
+    <h1>Make Payment</h1>
+
+    <div class="container">
+        <input type="text" id="phone" placeholder="Enter Phone Number"><br><br>
+        <input type="number" id="bill_amount" placeholder="Enter Bill Amount"><br><br>
+        <input type="text" id="promo_code" placeholder="Enter Promo Code (optional)"><br><br>
+        <button onclick="makeTransaction()">Pay</button>
+        <br><br>
+        <div id="result"></div>
+        <br>
+        <a href="/">Back to Home</a>
+    </div>
+
+    <script>
+
+        document.getElementById("phone").addEventListener("keypress", handleEnter);
+        document.getElementById("bill_amount").addEventListener("keypress", handleEnter);
+        document.getElementById("promo_code").addEventListener("keypress", handleEnter);
+
+        function handleEnter(e) {
+            if (e.key === "Enter") {
+                makeTransaction();
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById("result").innerHTML =
+                `<p class="error">${msg}</p>`;
+        }
+
+        function showSuccess(html) {
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function showLoading() {
+            document.getElementById("result").innerHTML =
+                `<p class="success">Processing transaction...</p>`;
+        }
+
+        function makeTransaction() {
+
+            const phone = document.getElementById("phone").value.trim();
+            const bill_amount = document.getElementById("bill_amount").value;
+            const promo_code = document.getElementById("promo_code").value.trim();
+
+            if (!phone || !bill_amount) {
+                showError("Phone and bill amount required");
+                return;
+            }
+
+            showLoading();
+
+            fetch(`/user/${phone}`)
+                .then(res => res.json())
+                .then(user => {
+
+                    if (user.error) {
+                        showError(user.error);
+                        return;
+                    }
+
+                    const previousBalance = user.wallet_balance;
+
+                    fetch("/transaction", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            phone: phone,
+                            bill_amount: parseFloat(bill_amount),
+                            promo_code: promo_code || null
+                        })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+
+                            if (data.error) {
+                                showError(data.error);
+                            } else {
+
+                                const t = data.transaction;
+
+                                fetch(`/user/${phone}`)
+                                    .then(res => res.json())
+                                    .then(updatedUser => {
+
+                                        showSuccess(`
+                        <div class="result-card">
+
+                            <p><strong>Name:</strong> ${user.name}</p>
+                            <p><strong>Phone:</strong> ${user.phone}</p>
+
+                            <hr>
+
+                            <p><strong>Previous Balance:</strong> ₹${Number(previousBalance).toFixed(2)}</p>
+                            <p><strong>Final Bill:</strong> ₹${Number(t.final_bill).toFixed(2)}</p>
+                            <p><strong>GST:</strong> ₹${Number(t.gst).toFixed(2)}</p>
+                            <p><strong>Cashback:</strong> ₹${Number(t.cashback).toFixed(2)}</p>
+
+                            <p><strong>Discounts:</strong> ${t.discounts_applied.length > 0
+                                                ? t.discounts_applied.join(", ")
+                                                : "No discounts applied"
+                                            }</p>
+
+                            <p><strong>Promo Code:</strong> ${promo_code ? promo_code : "Not Applied"
+                                            }</p>
+
+                            <hr>
+
+                            <p><strong>Remaining Balance:</strong> ₹${Number(updatedUser.wallet_balance).toFixed(2)}</p>
+
+                        </div>
+                    `);
+
+                                        document.getElementById("bill_amount").value = "";
+                                        document.getElementById("promo_code").value = "";
+                                    });
+
+                            }
+
+                        });
+
+                })
+                .catch(() => {
+                    showError("Something went wrong");
+                });
+        }
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Search User</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+
+    <h1>Search User</h1>
+
+    <div class="container">
+        <input type="text" id="phone" placeholder="Enter Phone Number"><br><br>
+        <button onclick="searchUser()">Search</button>
+        <br><br>
+        <div id="result"></div>
+        <br>
+        <a href="/">Back to Home</a>
+    </div>
+
+    <script>
+
+        document.getElementById("phone").addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                searchUser();
+            }
+        });
+
+        function showError(msg) {
+            document.getElementById("result").innerHTML =
+                `<p class="error">${msg}</p>`;
+        }
+
+        function searchUser() {
+            const phone = document.getElementById("phone").value.trim();
+            if (!phone) {
+                showError("Phone number is required");
+                return;
+            }
+
+            fetch(`/user/${phone}`)
+                .then(response => response.json())
+                .then(data => {
+
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        document.getElementById("result").innerHTML = `
+                    <div class="result-card">
+                        <p><strong>Name:</strong> ${data.name}</p>
+                        <p><strong>Phone:</strong> ${data.phone}</p>
+                        <p><strong>Wallet Balance:</strong> ₹${data.wallet_balance}</p>
+                        <p><strong>Total Transactions:</strong> ${data.transactions.length}</p>
+                    </div>
+                `;
+                    }
+
+                })
+                .catch(() => {
+                    showError("Something went wrong");
+                });
+        }
+
+    </script>
+
+</body>
+
+</html>

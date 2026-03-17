@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Wallet</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+
+    <h1>Wallet Management</h1>
+
+    <div class="container">
+
+        <input type="text" id="phone" placeholder="Enter Phone Number"><br><br>
+
+        <input type="number" id="amount" placeholder="Enter Amount"><br><br>
+
+        <button onclick="topupWallet()">Add Money</button>
+
+        <br><br>
+
+        <div id="result"></div>
+
+        <br>
+        <a href="/">Back to Home</a>
+
+    </div>
+
+    <script>
+
+        document.getElementById("phone").addEventListener("keypress", handleEnter);
+        document.getElementById("amount").addEventListener("keypress", handleEnter);
+
+        function handleEnter(e) {
+            if (e.key === "Enter") {
+                topupWallet();
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById("result").innerHTML =
+                `<p class="error">${msg}</p>`;
+        }
+
+        function showSuccess(html) {
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function topupWallet() {
+
+            const phone = document.getElementById("phone").value.trim();
+            const amount = document.getElementById("amount").value;
+
+            if (!phone || !amount) {
+                showError("All fields required");
+                return;
+            }
+
+            fetch(`/user/${phone}`)
+                .then(res => res.json())
+                .then(user => {
+
+                    if (user.error) {
+                        showError(user.error);
+                        return;
+                    }
+
+                    const previousBalance = user.wallet_balance;
+
+                    fetch("/wallet/topup", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            phone: phone,
+                            amount: parseFloat(amount)
+                        })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+
+                            if (data.error) {
+                                showError(data.error);
+                            } else {
+
+                                showSuccess(`
+                    <div class="result-card">
+                        <p><strong>Name:</strong> ${user.name}</p>
+                        <p><strong>Phone:</strong> ${user.phone}</p>
+                        <p><strong>Previous Balance:</strong> ₹${Number(previousBalance).toFixed(2)}</p>
+                        <p><strong>Amount Added:</strong> ₹${Number(amount).toFixed(2)}</p>
+                        <p><strong>New Balance:</strong> ₹${Number(data.balance).toFixed(2)}</p>
+                    </div>
+                `);
+
+                                document.getElementById("amount").value = "";
+                            }
+
+                        });
+
+                })
+                .catch(() => {
+                    showError("Something went wrong");
+                });
+        }
+
+    </script>
+
+</body>
+
+</html>
